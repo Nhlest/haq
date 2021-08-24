@@ -1,0 +1,25 @@
+-- fibonacci number generator
+-- where
+--  a number one before
+--  b number before
+--  n how many more numbers to print
+--    a   b   n
+fib::[W8, W8, W8] -> []
+  dup#
+  push# W8[0]
+  equals#
+  then#
+   drop#
+   drop#
+   drop#
+  else#
+   dive# 2
+   dup#
+   dive# 2
+   add#
+   dup#
+   native# printW8
+   dive# 1
+   push# W8[1]
+   subtract#
+   fib
