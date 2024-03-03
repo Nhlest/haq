@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.28)
-project(thingamabob)
+project(haq)
 
 add_definitions(-DGRAPHICS_API_OPENGL_43)
 add_subdirectory(raylib)
@@ -10,4 +10,4 @@ include_directories(raylib/src raygui/src)
 
 link_libraries(raylib wayland-client GLEW)
 
-add_executable(thingamabob main.cpp parser.cpp)
+add_executable(haq main.cpp parser.cpp)
