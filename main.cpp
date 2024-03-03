@@ -1,6 +1,8 @@
 #include <raylib.h>
 #include <rlgl.h>
+
 #define RAYGUI_IMPLEMENTATION
+
 #include <raygui.h>
 
 #include <GL/glew.h>
@@ -10,14 +12,14 @@
 
 const static Vector2 ZERO = Vector2(0.0, 0.0);
 
-void screen_print(const stbi_uc* font, Color *buf, u16 x, u16 y, const char* str, u32 len) {
-  for(u32 i = 0; i < len; i++, x+=6) {
+void screen_print(const stbi_uc *font, Color *buf, u16 x, u16 y, const char *str, u32 len) {
+  for (u32 i = 0; i < len; i++, x += 6) {
     char c = str[i] - ' ';
     u16 fy = (c / 10) * 9;
     u16 fx = (c % 10) * 6;
-    for(u16 sx = 0; sx < 6; sx++) {
-      for(u16 sy = 0; sy < 9; sy++) {
-        buf[(y+sy)*100+(x+sx)] = font[(sy+fy)*60+(sx+fx)] ? WHITE : BLACK;
+    for (u16 sx = 0; sx < 6; sx++) {
+      for (u16 sy = 0; sy < 9; sy++) {
+        buf[(y + sy) * 100 + (x + sx)] = font[(sy + fy) * 60 + (sx + fx)] ? WHITE : BLACK;
       }
     }
   }
@@ -29,7 +31,7 @@ i32 main() {
   auto image = GenImageColor(100, 100, RED);
   UnloadImage(image);
   auto texture = LoadTextureFromImage(image);
-  auto buffer = (Color*)calloc(100, 100 * 4);
+  auto buffer = (Color *) calloc(100, 100 * 4);
 
   i32 size_x, size_y, chan;
   auto font_png = stbi_load("font.png", &size_x, &size_y, &chan, 1);
@@ -40,9 +42,9 @@ i32 main() {
   do {
     tok = parser.next_tok();
     tok.print();
-  } while(tok.etok != EOF);
+  } while (tok.etok != EOF);
 
-  screen_print(font_png, (Color*) buffer, 0, 0, "print", 5);
+  screen_print(font_png, (Color *) buffer, 0, 0, "print", 5);
 
   while (!WindowShouldClose()) {
     glBindTexture(GL_TEXTURE_2D, texture.id);
