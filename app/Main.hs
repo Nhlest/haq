@@ -3,4 +3,7 @@ module Main where
 import Lib
 
 main :: IO ()
-main = pure m
+main = do
+  a <- parseHaQF "hello.haq"
+  print a
+  pure ()
