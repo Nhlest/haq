@@ -1,0 +1,4 @@
+.stack-work/
+*~
+haq.cabal
+stack.yaml.lock
