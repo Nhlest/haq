@@ -13,6 +13,7 @@ import Foreign hiding (void)
 import Raylib.Util.RLGL (rlCheckErrors)
 import Control.Monad
 import Debug.Trace
+import qualified GHC.ForeignPtr as SV
 
 main :: IO ()
 main = do
@@ -31,21 +32,18 @@ startup r = do
   
   mainLoop 0 v2 texture False r
 
-change :: SV.Vector Word8 -> Int -> SV.Vector Word8
-change v i = trace (show i) $ v SV.// [(i*4+0, 0), (i*4+1, 0), (i*4+2, 0)]
-
 mainLoop :: Int -> SV.Vector Word8 -> Texture -> Bool -> WindowResources -> IO WindowResources
 mainLoop _ _ _ True r = pure r
 mainLoop ii v texture _ r = do
-  let ptr = fst $ SV.unsafeToForeignPtr0 v
-  let t_id = texture'id texture
-  let v2 = change v ii
-  glBindTexture GL_TEXTURE_2D (fromInteger t_id)
-  withForeignPtr ptr $ \p -> do
-    glTexSubImage2D GL_TEXTURE_2D 0 0 0 100 100 GL_RGBA GL_UNSIGNED_BYTE p
-  rlCheckErrors
-  drawing $ do
-    clearBackground lightGray
-    drawTexturePro texture (Rectangle 0.0 0.0 200.0 200.0) (Rectangle 0.0 0.0 800.0 600.0) (Vector2 0.0 0.0) 0.0 white
+  SV.unsafeWith v $ \ptr -> do
+    let t_id = texture'id texture
+    glBindTexture GL_TEXTURE_2D (fromInteger t_id)
+    glTexSubImage2D GL_TEXTURE_2D 0 0 0 100 100 GL_RGBA GL_UNSIGNED_BYTE ptr
+    rlCheckErrors
+    drawing $ do
+      clearBackground lightGray
+      drawTexturePro texture (Rectangle 0.0 0.0 200.0 200.0) (Rectangle 0.0 0.0 800.0 600.0) (Vector2 0.0 0.0) 0.0 white
+    let np :: Ptr Word8 = plusPtr ptr (ii * 4 + 1)
+    poke np 0
   shouldClose <- windowShouldClose
-  mainLoop (ii+1) v2 texture shouldClose r
+  mainLoop (ii+1) v texture shouldClose r
