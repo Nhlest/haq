@@ -8,12 +8,11 @@ import Raylib.Core.Textures
 import Raylib.Types.Core
 import Raylib.Types.Core.Textures
 import Graphics.GL.Compatibility30
+import qualified Data.Vector.Storable.Mutable as MV
 import qualified Data.Vector.Storable as SV
 import Foreign hiding (void)
 import Raylib.Util.RLGL (rlCheckErrors)
 import Control.Monad
-import Debug.Trace
-import qualified GHC.ForeignPtr as SV
 
 main :: IO ()
 main = do
@@ -29,13 +28,15 @@ startup r = do
   texture <- loadTextureFromImage image r
   let v :: SV.Vector Word8 = SV.replicate (200*200*4) 0
   let v2 :: SV.Vector Word8 = v SV.// concat [[(x*4+3, 255), (x*4+1, 255)]| x <- [0..(200*200-1)]]
-  
-  mainLoop 0 v2 texture False r
 
-mainLoop :: Int -> SV.Vector Word8 -> Texture -> Bool -> WindowResources -> IO WindowResources
+  mv <- SV.thaw v2
+  
+  mainLoop 0 mv texture False r
+
+mainLoop :: Int -> MV.IOVector Word8 -> Texture -> Bool -> WindowResources -> IO WindowResources
 mainLoop _ _ _ True r = pure r
 mainLoop ii v texture _ r = do
-  SV.unsafeWith v $ \ptr -> do
+  MV.unsafeWith v $ \ptr -> do
     let t_id = texture'id texture
     glBindTexture GL_TEXTURE_2D (fromInteger t_id)
     glTexSubImage2D GL_TEXTURE_2D 0 0 0 100 100 GL_RGBA GL_UNSIGNED_BYTE ptr
