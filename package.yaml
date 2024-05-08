@@ -10,6 +10,7 @@ dependencies:
 - vector
 - mtl
 - lens
+- text
 
 ghc-options:
 - -Wall

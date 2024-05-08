@@ -12,7 +12,6 @@ import qualified Data.Vector.Storable.Mutable as MV
 import qualified Data.Vector.Storable as SV
 import Foreign hiding (void)
 import Raylib.Util.RLGL (rlCheckErrors)
-import Control.Monad
 import Control.Monad.State.Lazy
 import System.Environment
 
@@ -24,8 +23,8 @@ main = do
   let file_name = head args
   ast <- parseHaQF file_name
   print ast
-  let (block, state) =  runState (compileBlock ast) emptyCSM
-  print state
+  let (block, csm_state) =  runState (compileBlock ast) emptyCSM
+  print csm_state
   print block
   pure ()
   -- setConfigFlags [VsyncHint]
@@ -54,8 +53,8 @@ changeColor ptr i (r, g, b, a) = do
     let p2 :: Ptr Word8 = plusPtr ptr (i*2 + 1)
     let c = a * 32768 + b * 1024 + g * 32 + r
     let (b1, b2) = divMod c 256 
-    -- poke p1 (fromIntegral b1)
-    -- poke p2 (fromIntegral b2)
+    poke p1 (fromIntegral b1)
+    poke p2 (fromIntegral b2)
     poke p1 31
     poke p2 128
 

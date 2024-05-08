@@ -1,21 +1,19 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Lib where
 
-import Text.Parsec.String
+import Text.Parsec.Text
 import Text.Parsec
 import Data.Functor
 import Control.Applicative
 import qualified Data.Vector as V
-import qualified Data.Map.Lazy as M
 import qualified Control.Monad.State.Lazy as S
 import Control.Lens hiding (noneOf)
-import Control.Lens.TH
-import Debug.Trace
 import Control.Monad
+import qualified Data.Text.IO as TXT
 
 parseHaQF :: String -> IO [AST]
 parseHaQF file = do
-  text <- readFile file
+  text <- TXT.readFile file
   case runParser parseHaQ () file text of
     Left e -> error $ show e
     Right r -> pure r
@@ -125,10 +123,10 @@ $(makeLenses ''CompilerStateMachine)
 type CompilerStateMachineM a = S.State CompilerStateMachine a
 
 (++=) :: S.MonadState s m => ASetter' s [a] -> a -> m ()
-(++=) lens value = lens <>= [value]
+(++=) lens_a value = lens_a <>= [value]
 
 (=:) :: S.MonadState s m => ASetter s s [a] [a] -> a -> m ()
-(=:) lens value = lens %= (value:)
+(=:) lens_a value = lens_a %= (value:)
 
 errorCheck :: CompilerStateMachineM (Either a String) -> CompilerStateMachineM a
 errorCheck f = do
@@ -140,9 +138,9 @@ errorCheck f = do
 compileBlock :: [AST] -> CompilerStateMachineM [ByteCode]
 compileBlock block = do 
   forM_ block $ errorCheck . compileAst
-  block <- use current_block
+  old_block <- use current_block
   current_block .= []
-  pure block
+  pure old_block
 
 compileAst :: AST -> CompilerStateMachineM (Either () String)
 compileAst (Number n) = cNumber n
@@ -156,7 +154,8 @@ cNumber n = do
   local_stack =: StackValue Nothing VNumber
   pure $ Left ()
 
-pop lens = lens %%= (\(x:xs) -> (x, xs))
+pop :: S.MonadState s m => Over (->) ((,) r) s s [r] [r] -> m r
+pop lens_a = lens_a %%= (\x -> (head x, tail x))
 
 checkStackLength :: Int -> CompilerStateMachineM (Either a String) -> CompilerStateMachineM (Either a String)
 checkStackLength n f = do
