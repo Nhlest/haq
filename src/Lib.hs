@@ -1,9 +1,17 @@
+{-# LANGUAGE TemplateHaskell #-}
 module Lib where
 
 import Text.Parsec.String
 import Text.Parsec
 import Data.Functor
 import Control.Applicative
+import qualified Data.Vector as V
+import qualified Data.Map.Lazy as M
+import qualified Control.Monad.State.Lazy as S
+import Control.Lens hiding (noneOf)
+import Control.Lens.TH
+import Debug.Trace
+import Control.Monad
 
 parseHaQF :: String -> IO [AST]
 parseHaQF file = do
@@ -32,11 +40,12 @@ parseAST = do
         void $ lookAhead $ noneOf "}])"
         pure $ Word g
        glyph       = do 
+        -- TODO: errors out if it's the last character in input before EOF
         g <- glyph_
         void $ lookAhead $ noneOf "}])"
         pure $ Glyph g
        alphabet    = oneOf "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-       glyph_      = oneOf "':/+.->"
+       glyph_      = oneOf "':/+.-<>=_@"
        biglyph     = liftA2 BiGlyph glyph_ glyph_
        glyphedword = do
         g <- glyph_
@@ -83,3 +92,100 @@ data AST = Number Int
          | Block BracketType GlyphC [AST]
          | Block_ BracketType [AST]
          deriving Show
+
+data ByteCode = Drop
+              | Sink Int
+              | Dive Int
+              | LEq
+              | Push Int
+              | Minus
+              | Plus
+              | CallReq
+              | Call Int
+              | Print
+  deriving Show
+
+data VType = VNumber | VBoolean deriving (Show, Eq)
+
+data StackValue = StackValue { 
+  alias :: Maybe String,
+  vType :: VType
+ } deriving Show
+
+data CompilerStateMachine = CompilerStateMachine {
+  _blocks :: V.Vector [ByteCode],
+  _current_block :: [ByteCode],
+  _local_stack :: [StackValue]
+} deriving Show
+
+emptyCSM :: CompilerStateMachine
+emptyCSM = CompilerStateMachine V.empty [] []
+
+$(makeLenses ''CompilerStateMachine)
+type CompilerStateMachineM a = S.State CompilerStateMachine a
+
+(++=) :: S.MonadState s m => ASetter' s [a] -> a -> m ()
+(++=) lens value = lens <>= [value]
+
+(=:) :: S.MonadState s m => ASetter s s [a] [a] -> a -> m ()
+(=:) lens value = lens %= (value:)
+
+errorCheck :: CompilerStateMachineM (Either a String) -> CompilerStateMachineM a
+errorCheck f = do
+  result <- f
+  case result of
+    Left r -> pure r
+    Right e -> error e
+
+compileBlock :: [AST] -> CompilerStateMachineM [ByteCode]
+compileBlock block = do 
+  forM_ block $ errorCheck . compileAst
+  block <- use current_block
+  current_block .= []
+  pure block
+
+compileAst :: AST -> CompilerStateMachineM (Either () String)
+compileAst (Number n) = cNumber n
+compileAst (Glyph '<') = cSink
+compileAst (Glyph '+') = cPlus
+compileAst x = error $ show x ++ " Not Yet Implemented"
+
+cNumber :: Int -> CompilerStateMachineM (Either () String)
+cNumber n = do
+  current_block ++= Push n
+  local_stack =: StackValue Nothing VNumber
+  pure $ Left ()
+
+pop lens = lens %%= (\(x:xs) -> (x, xs))
+
+checkStackLength :: Int -> CompilerStateMachineM (Either a String) -> CompilerStateMachineM (Either a String)
+checkStackLength n f = do
+  stack_length <- length <$> use local_stack
+  if stack_length < n then
+    pure $ Right "Stack underflow"
+  else f
+
+cSink :: CompilerStateMachineM (Either () String)
+cSink = do
+  checkStackLength 2 $ do
+    current_block ++= Sink 1
+    a <- pop local_stack
+    b <- pop local_stack
+    local_stack =: a
+    local_stack =: b
+    pure $ Left ()
+
+cPlus :: CompilerStateMachineM (Either () String)
+cPlus = do
+  checkStackLength 2 $ do
+    a <- pop local_stack
+    b <- pop local_stack
+    if vType a /= vType b then
+      pure $ Right "Type Mismatch"
+    else do
+      if vType a /= VNumber then
+        pure $ Right "Type Not Number"
+      else do
+        current_block ++= Plus
+        local_stack =: StackValue Nothing VNumber
+        pure $ Left ()

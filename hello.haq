@@ -1,4 +1,2 @@
-(' {: Int -> Int :} 1 + ') /inc
-( 1 2 + )
-5 inc .p
-1 inc 2 > (t "Test" .p t) (f "False" .p f)
+( {: Int :a Int :b Int :c -> Int :} >c 0 <= (t _ _ t) (f 1 - >b >a + >b <a <b @@ f) ) /fib
+1 1 10 fib .p

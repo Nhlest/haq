@@ -3,10 +3,13 @@ version: 0.0.1
 
 dependencies:
 - base
+- containers
 - parsec
 - h-raylib
 - OpenGLRaw
 - vector
+- mtl
+- lens
 
 ghc-options:
 - -Wall

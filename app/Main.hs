@@ -13,13 +13,21 @@ import qualified Data.Vector.Storable as SV
 import Foreign hiding (void)
 import Raylib.Util.RLGL (rlCheckErrors)
 import Control.Monad
+import Control.Monad.State.Lazy
+import System.Environment
 
 import Lib
 
 main :: IO ()
 main = do
-  ast <- parseHaQF "hello.haq"
+  args <- getArgs 
+  let file_name = head args
+  ast <- parseHaQF file_name
   print ast
+  let (block, state) =  runState (compileBlock ast) emptyCSM
+  print state
+  print block
+  pure ()
   -- setConfigFlags [VsyncHint]
   -- setTargetFPS 0
   -- void $ withWindow 800 600 "raylib" 60 startup
